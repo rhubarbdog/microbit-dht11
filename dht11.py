@@ -11,6 +11,7 @@
 # ph02 - decimal data
 # ph03 - microbit
 # ph04 - grab_bits - thumb assembly
+# ph05 - more speed
 
 DEBUG=True
 from microbit import *
@@ -23,21 +24,25 @@ class DHT11:
 
     def __init__(self, pin=None):
         self._pin = pin
-        self._buff = bytearray(1024)
+        self._buff = bytearray(512)
+        if self._pin == pin0:
+            self._pin2bit = 3
               
     def read(self):
-
         self._send_and_sleep(True,50,"ms")
-        self._send_and_sleep(False,10,"ms") # this should be 20ms
+
+        self._block_irq()
+
+        self._send_and_sleep(False,12000,"us") # this should be 20ms
 
         self._pin.set_pull(self._pin.PULL_UP)
               
-        if self._pin == pin0:
-            pin2bit = 3
-
-        if self._grab_bits(pin2bit, self._buff, len(self._buff)) \
+        if self._grab_bits(self._pin2bit, self._buff, len(self._buff)) \
            != len(self._buff):
+            self._unblock_irq()
             raise DataError("Grab bits failed.")
+        else:
+            self._unblock_irq()
 
         if DEBUG:
             for i in range(len(self._buff)):
@@ -76,12 +81,23 @@ class DHT11:
         else:
             time.sleep(sleep)
 
-        # r0 - pin bit id
-        # r1 - byte array
-        # r2 - len byte array, must be a multiple of 4
+    @staticmethod
+    @micropython.asm_thumb
+    def _block_irq():
+        cpsid('i')          # disable interrupts to go really fast
+
+    @staticmethod
+    @micropython.asm_thumb
+    def _unblock_irq():
+        cpsie('i')          # disable interrupts to go really fast
+
+    # r0 - pin bit id
+    # r1 - byte array
+    # r2 - len byte array, must be a multiple of 4
     @staticmethod
     @micropython.asm_thumb
     def _grab_bits(r0, r1, r2):
+        #b(START)
         mov(r5, 0x00)        # r5 - set it to 0 the error
         mov(r4, 0x03)        # r4 - set to 3 to check for remainder on // 4
         mov(r6, r2)          # r6 - temp value for r2
@@ -91,7 +107,7 @@ class DHT11:
 
         # DELAY routine
         label(DELAY)
-        mov(r7, 0x13)
+        mov(r7, 0x1b)
         label(delay_loop)
         sub(r7, 1)
         bne(delay_loop)
@@ -141,17 +157,20 @@ class DHT11:
         mov(r0, r5)       # return number of bytes written
 
     def _parse_data(self):
+        # changed initial states, tyey are lost in the change over
         INIT_PULL_DOWN = 1
         INIT_PULL_UP = 2
         DATA_1_PULL_DOWN = 3
         DATA_PULL_UP = 4
         DATA_PULL_DOWN = 5
 
-        state = INIT_PULL_DOWN
+        #state = INIT_PULL_DOWN
+        state = INIT_PULL_UP
 
         bit_lens = [] 
         length = 0 
-
+        only = False
+        
         for i in range(len(self._buff)):
 
             current = self._buff[i]
@@ -165,7 +184,8 @@ class DHT11:
                     continue
             if state == INIT_PULL_UP:
                 if current == 1:
-                    state = DATA_1_PULL_DOWN
+                    #state = DATA_1_PULL_DOWN
+                    state = DATA_PULL_DOWN
                     continue
                 else:
                     continue
