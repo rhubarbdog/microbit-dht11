@@ -31,14 +31,12 @@ class DHT11:
         time.sleep_ms(50)
         self._block_irq()
 
-        # this should be 20ms
         self._pin.write_digital(0)
-        time.sleep_us(10700)
+        time.sleep_ms(20)
         
         self._pin.set_pull(self._pin.PULL_UP)
         
-        if self._grab_bits(self._pin2bit, self._buff, length) \
-           != length:
+        if self._grab_bits(self._pin2bit, self._buff, length) != length:
             self._unblock_irq()
             raise Exception("Grab bits failed.")
         else:
@@ -47,8 +45,7 @@ class DHT11:
         data = self._parse_data()
 
         if len(data) != 40:
-            raise DataError("Too many or too few bits "+\
-                            str(len(data)))
+            raise DataError("Too many or too few bits " + str(len(data)))
 
         bits = self._calc_bits(data)
         data = self._bits_to_bytes(bits)
@@ -273,7 +270,7 @@ if __name__ == '__main__':
             t , h = sensor.read()
             print("%2.1f%sC  %2.1f%% " % (t, DEGREES, h))
         except DataError as e:
-            print("Error :"+str(e))
+            print("Error : " + str(e))
 
 
         time.sleep(2)
