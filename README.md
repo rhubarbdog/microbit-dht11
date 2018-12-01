@@ -1,13 +1,7 @@
-# microbit-dht11
-a *nearly working* DHT11 class for microbit
+<h1>DHT11 - temperature and humidity measurement</h1>
 
-This nearly works I've posted it so intrested parties can try and get it working
+This sensor uses 1 wire for communication, the receipt of bits is written in assembler, it's the only way i could manage to receive all of the data.<br/><br/>
 
-The code is partially complete it only works in `microbit.pin0`
+There is one user method `.read` this will either return a tuple of valid temperatur and humidity data or raise an exception. The only exception to be trapped witha# `try:` `except:` block is `DataError`.  The sensor may also raise a `ValueError` for using an unsuitable pin or a general `Exception` if the are issues with the assembler routines.
 
-The .read method is too slow at switching between write mode (trigger the sensor)
-and read mode (grabbing the bit stream)
-
-The bits are grabbed with a `Thumb assembly` routine
-
-Please feel free to try and get this up and running.
+There is some example code at the end of file `dht11.py` you need to run a REPL session to see the data output.

@@ -5,81 +5,99 @@
 # this began life as raspberry pi code initial author
 # https://github.com/szazo
 #
-# modifications
-#
-# ph01 - raise an exception and cull DHT11Result
-# ph02 - decimal data
-# ph03 - microbit
-# ph04 - grab_bits - thumb assembly
-# ph05 - more speed
+# License - MIT
 
-DEBUG=True
-from microbit import *
+import microbit
 import time
+
+DEGREES = u'\xb0'
 
 class DataError(Exception):
     pass
 
 class DHT11:
-
     def __init__(self, pin=None):
         self._pin = pin
         self._buff = bytearray(512)
-        if self._pin == pin0:
-            self._pin2bit = 3
+        for i in range(len(self._buff)):
+            self._buff[i] = 1
+        self._pin2bit = self._pin2bit_id()
               
     def read(self):
-        self._send_and_sleep(True,50,"ms")
+        
+        length = (len(self._buff) // 4) * 4
 
+        self._pin.write_digital(1)
+        time.sleep_ms(50)
         self._block_irq()
 
-        self._send_and_sleep(False,12000,"us") # this should be 20ms
-
+        # this should be 20ms
+        self._pin.write_digital(0)
+        time.sleep_us(10700)
+        
         self._pin.set_pull(self._pin.PULL_UP)
-              
-        if self._grab_bits(self._pin2bit, self._buff, len(self._buff)) \
-           != len(self._buff):
+        
+        if self._grab_bits(self._pin2bit, self._buff, length) \
+           != length:
             self._unblock_irq()
-            raise DataError("Grab bits failed.")
+            raise Exception("Grab bits failed.")
         else:
             self._unblock_irq()
 
-        if DEBUG:
-            for i in range(len(self._buff)):
-                print(self._buff[i],end="")
-            print("")
-                
-        pull_up = self._parse_data()
+        data = self._parse_data()
 
-        if len(pull_up) != 40:
+        if len(data) != 40:
             raise DataError("Too many or too few bits "+\
-                            str(len(pull_up)))
+                            str(len(data)))
 
-        bits = self._calc_bits(pull_up_lengths)
-        the_bytes = self._bits_to_bytes(bits)
+        bits = self._calc_bits(data)
+        data = self._bits_to_bytes(bits)
 
-        checksum = self._calc_checksum(the_bytes)
-        if the_bytes[4] != checksum:
+        checksum = self._calc_checksum(data)
+        if data[4] != checksum:
             raise DataError("Checksum invalid.")
 
-        temp=the_bytes[2] + (the_bytes[3] / 10)
-        humid=the_bytes[0] + (the_bytes[1] / 10)
+        temp=data[2] + (data[3] / 10)
+        humid=data[0] + (data[1] / 10)
         return (temp, humid)
 
-    def _send_and_sleep(self, high, sleep,units=None):
-        if high:
-            self._pin.write_digital(1)
+    def _pin2bit_id(self):
+        # this is a dictionary, microbit.pinX can't be a __hash__
+        pin = self._pin
+        if pin == microbit.pin0:
+            shift = 3
+        elif pin == microbit.pin1:
+            shift = 2
+        elif pin == microbit.pin2:
+            shift = 1
+        elif pin == microbit.pin3:
+            shift = 4
+        elif pin == microbit.pin4:
+            shift = 5
+        elif pin == microbit.pin6:
+            shift = 12
+        elif pin == microbit.pin7:
+            shift = 11
+        elif pin == microbit.pin8:
+            shift = 18
+        elif pin == microbit.pin9:
+            shift = 10
+        elif pin == microbit.pin10:
+            shift = 6
+        elif pin == microbit.pin12:
+            shift = 20
+        elif pin == microbit.pin13:
+            shift = 23
+        elif pin == microbit.pin14:
+            shift = 22
+        elif pin == microbit.pin15:
+            shift = 21
+        elif pin == microbit.pin16:
+            shift = 16
         else:
-            self._pin.write_digital(0)
+            raise ValueError('function not suitable for this pin')
 
-        if not units is None:
-            units=units.lower()
-        if units == "us":
-            time.sleep_us(sleep)
-        elif units == "ms":
-            time.sleep_ms(sleep)
-        else:
-            time.sleep(sleep)
+        return shift
 
     @staticmethod
     @micropython.asm_thumb
@@ -89,7 +107,7 @@ class DHT11:
     @staticmethod
     @micropython.asm_thumb
     def _unblock_irq():
-        cpsie('i')          # disable interrupts to go really fast
+        cpsie('i')          # enable interupts nolonger time critical
 
     # r0 - pin bit id
     # r1 - byte array
@@ -97,17 +115,11 @@ class DHT11:
     @staticmethod
     @micropython.asm_thumb
     def _grab_bits(r0, r1, r2):
-        #b(START)
-        mov(r5, 0x00)        # r5 - set it to 0 the error
-        mov(r4, 0x03)        # r4 - set to 3 to check for remainder on // 4
-        mov(r6, r2)          # r6 - temp value for r2
-        and_(r6, r4)         # check r2 divides by 4
-        bne(RETURN)          # error return 
         b(START)
 
         # DELAY routine
         label(DELAY)
-        mov(r7, 0x1b)
+        mov(r7, 0x18)
         label(delay_loop)
         sub(r7, 1)
         bne(delay_loop)
@@ -184,8 +196,7 @@ class DHT11:
                     continue
             if state == INIT_PULL_UP:
                 if current == 1:
-                    #state = DATA_1_PULL_DOWN
-                    state = DATA_PULL_DOWN
+                    state = DATA_1_PULL_DOWN
                     continue
                 else:
                     continue
@@ -236,7 +247,7 @@ class DHT11:
         return bits
 
     def _bits_to_bytes(self, bits):
-        the_bytes = []
+        data = []
         byte = 0
 
         for i in range(0, len(bits)):
@@ -245,28 +256,24 @@ class DHT11:
                 byte = byte | 1
 
             if ((i + 1) % 8 == 0):
-                the_bytes.append(byte)
+                data.append(byte)
                 byte = 0
 
-        return the_bytes
+        return data
 
-    def _calc_checksum(self, the_bytes):
-        return the_bytes[0] + the_bytes[1] + the_bytes[2] + the_bytes[3] & 0xff
+    def _calc_checksum(self, data):
+        return data[0] + data[1] + data[2] + data[3] & 0xff
 
 if __name__ == '__main__':
-    from microbit import *
 
-    sensor = DHT11(pin0)
+    sensor = DHT11(microbit.pin0)
 
     while True:
         try:
             t , h = sensor.read()
-            #display.scroll("%2.1fC  %2.1f%% " % (t, h))
-            print("%2.1fC  %2.1f%% " % (t, h))
+            print("%2.1f%sC  %2.1f%% " % (t, DEGREES, h))
         except DataError as e:
-            #display.scroll("Error :"+str(e))
             print("Error :"+str(e))
 
 
-        # no need to sleep display.scroll takes loads of time
-        sleep(2000)
+        time.sleep(2)
