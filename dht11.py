@@ -21,7 +21,7 @@ class DHT11:
         self._pin2bit = self._pin2bit_id()
               
     def read(self):
-        buffer_ = bytearray(512)
+        buffer_ = bytearray(400)
         length = (len(buffer_) // 4) * 4
         for i in range(length, len(buffer_)):
             buffer_[i] = 1
@@ -117,7 +117,7 @@ class DHT11:
 
         # DELAY routine
         label(DELAY)
-        mov(r7, 0x18)
+        mov(r7, 0x20)
         label(delay_loop)
         sub(r7, 1)
         bne(delay_loop)
