@@ -21,19 +21,20 @@ class DHT11:
         self._pin2bit = self._pin2bit_id()
               
     def read(self):
-        buffer_ = bytearray(400)
+        pin = self._pin
+        buffer_ = bytearray(320)
         length = (len(buffer_) // 4) * 4
         for i in range(length, len(buffer_)):
             buffer_[i] = 1
 
-        self._pin.write_digital(1)
+        pin.write_digital(1)
         time.sleep_ms(50)
         self._block_irq()
 
-        self._pin.write_digital(0)
+        pin.write_digital(0)
         time.sleep_ms(20)
         
-        self._pin.set_pull(self._pin.PULL_UP)
+        pin.set_pull(pin.PULL_UP)
         
         if self._grab_bits(self._pin2bit, buffer_, length) != length:
             self._unblock_irq()
@@ -41,6 +42,10 @@ class DHT11:
         else:
             self._unblock_irq()
 
+        #for b in buffer_:
+        #    print(b, end = "")
+        #print('')
+        
         data = self._parse_data(buffer_)
 
         del buffer_
@@ -117,7 +122,7 @@ class DHT11:
 
         # DELAY routine
         label(DELAY)
-        mov(r7, 0x20)
+        mov(r7, 0x2d)
         label(delay_loop)
         sub(r7, 1)
         bne(delay_loop)
