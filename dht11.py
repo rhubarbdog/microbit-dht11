@@ -18,14 +18,13 @@ class DataError(Exception):
 class DHT11:
     def __init__(self, pin=None):
         self._pin = pin
-        self._buff = bytearray(512)
-        for i in range(len(self._buff)):
-            self._buff[i] = 1
         self._pin2bit = self._pin2bit_id()
               
     def read(self):
-        
-        length = (len(self._buff) // 4) * 4
+        buffer_ = bytearray(512)
+        length = (len(buffer_) // 4) * 4
+        for i in range(length, len(buffer_)):
+            buffer_[i] = 1
 
         self._pin.write_digital(1)
         time.sleep_ms(50)
@@ -36,14 +35,16 @@ class DHT11:
         
         self._pin.set_pull(self._pin.PULL_UP)
         
-        if self._grab_bits(self._pin2bit, self._buff, length) != length:
+        if self._grab_bits(self._pin2bit, buffer_, length) != length:
             self._unblock_irq()
             raise Exception("Grab bits failed.")
         else:
             self._unblock_irq()
 
-        data = self._parse_data()
+        data = self._parse_data(buffer_)
 
+        del buffer_
+        
         if len(data) != 40:
             raise DataError("Too many or too few bits " + str(len(data)))
 
@@ -165,7 +166,7 @@ class DHT11:
         label(RETURN)
         mov(r0, r5)       # return number of bytes written
 
-    def _parse_data(self):
+    def _parse_data(self, buffer_):
         # changed initial states, tyey are lost in the change over
         INIT_PULL_DOWN = 1
         INIT_PULL_UP = 2
@@ -180,9 +181,9 @@ class DHT11:
         length = 0 
         only = False
         
-        for i in range(len(self._buff)):
+        for i in range(len(buffer_)):
 
-            current = self._buff[i]
+            current = buffer_[i]
             length += 1
 
             if state == INIT_PULL_DOWN:
@@ -264,7 +265,6 @@ class DHT11:
 if __name__ == '__main__':
 
     sensor = DHT11(microbit.pin0)
-
     while True:
         try:
             t , h = sensor.read()
