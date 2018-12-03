@@ -239,13 +239,10 @@ class DHT11:
                 longest = length
 
         halfway = shortest + (longest - shortest) / 2
-        bits = []
+        bits = bytearray(40)
 
-        for i in range(0, len(pull_up_lengths)):
-            bit = False
-            if pull_up_lengths[i] > halfway:
-                bit = True
-            bits.append(bit)
+        for i in range(len(pull_up_lengths)):
+            bits[i] = pull_up_lengths[i] > halfway
 
         return bits
 
@@ -253,7 +250,7 @@ class DHT11:
         data = []
         byte = 0
 
-        for i in range(0, len(bits)):
+        for i in range(len(bits)):
             byte = byte << 1
             if bits[i]:
                 byte = byte | 1
