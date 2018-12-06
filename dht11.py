@@ -16,14 +16,16 @@ class DataError(Exception):
     pass
 
 class DHT11:
-    def __init__(self, pin=None):
+    def __init__(self, pin):
         self._pin = pin
-        self._pin2bit = self._pin2bit_id()
               
     def read(self):
+        # creating these locals speeds things up len() is very slow
         pin = self._pin
+        pin2bit = self._pin2bit()
         buffer_ = bytearray(320)
         length = (len(buffer_) // 4) * 4
+
         for i in range(length, len(buffer_)):
             buffer_[i] = 1
 
@@ -36,7 +38,7 @@ class DHT11:
         
         pin.set_pull(pin.PULL_UP)
         
-        if self._grab_bits(self._pin2bit, buffer_, length) != length:
+        if self._grab_bits(pin2bit, buffer_, length) != length:
             self._unblock_irq()
             raise Exception("Grab bits failed.")
         else:
@@ -50,8 +52,12 @@ class DHT11:
 
         del buffer_
         
-        if len(data) != 40:
-            raise DataError("Too many or too few bits " + str(len(data)))
+        if data is None or len(data) != 40:
+            if data is None:
+                bits = 0
+            else:
+                bits = len(data)
+            raise DataError("Too many or too few bits " + str(bits))
 
         bits = self._calc_bits(data)
         data = self._bits_to_bytes(bits)
@@ -64,7 +70,7 @@ class DHT11:
         humid=data[0] + (data[1] / 10)
         return (temp, humid)
 
-    def _pin2bit_id(self):
+    def _pin2bit(self):
         # this is a dictionary, microbit.pinX can't be a __hash__
         pin = self._pin
         if pin == microbit.pin0:
@@ -182,9 +188,10 @@ class DHT11:
         #state = INIT_PULL_DOWN
         state = INIT_PULL_UP
 
-        bit_lens = [] 
-        length = 0 
-        only = False
+        max_bits = 50
+        bits = bytearray(max_bits)
+        length = 0
+        bit_ = 0
         
         for i in range(len(buffer_)):
 
@@ -218,13 +225,23 @@ class DHT11:
                     continue
             if state == DATA_PULL_DOWN:
                 if current == 0:
-                    bit_lens.append(length)
+                    bits[bit_] = length
+                    bit_ += 1
                     state = DATA_PULL_UP
                     continue
                 else:
                     continue
 
-        return bit_lens
+            if bit_ >= max_bits:
+                break
+
+        if bit_ == 0:
+            return None
+        
+        results = bytearray(bit_)
+        for i in range(bit_):
+            results[i] = bits[i]
+        return results
 
     def _calc_bits(self, pull_up_lengths):
 
@@ -247,7 +264,8 @@ class DHT11:
         return bits
 
     def _bits_to_bytes(self, bits):
-        data = []
+        data = bytearray(5)
+        did = 0
         byte = 0
 
         for i in range(len(bits)):
@@ -256,7 +274,8 @@ class DHT11:
                 byte = byte | 1
 
             if ((i + 1) % 8 == 0):
-                data.append(byte)
+                data[did] = byte
+                did += 1
                 byte = 0
 
         return data
@@ -273,6 +292,5 @@ if __name__ == '__main__':
             print("%2.1f%sC  %2.1f%% " % (t, DEGREES, h))
         except DataError as e:
             print("Error : " + str(e))
-
 
         time.sleep(2)
