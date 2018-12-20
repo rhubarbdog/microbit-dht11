@@ -7,7 +7,7 @@
 #
 # License - MIT
 
-import microbit
+import microbit as uBit
 import time
 
 DEGREES = u'\xb0'
@@ -73,35 +73,35 @@ class DHT11:
     def _pin2bit(self):
         # this is a dictionary, microbit.pinX can't be a __hash__
         pin = self._pin
-        if pin == microbit.pin0:
+        if pin == uBit.pin0:
             shift = 3
-        elif pin == microbit.pin1:
+        elif pin == uBit.pin1:
             shift = 2
-        elif pin == microbit.pin2:
+        elif pin == uBit.pin2:
             shift = 1
-        elif pin == microbit.pin3:
+        elif pin == uBit.pin3:
             shift = 4
-        elif pin == microbit.pin4:
+        elif pin == uBit.pin4:
             shift = 5
-        elif pin == microbit.pin6:
+        elif pin == uBit.pin6:
             shift = 12
-        elif pin == microbit.pin7:
+        elif pin == uBit.pin7:
             shift = 11
-        elif pin == microbit.pin8:
+        elif pin == uBit.pin8:
             shift = 18
-        elif pin == microbit.pin9:
+        elif pin == uBit.pin9:
             shift = 10
-        elif pin == microbit.pin10:
+        elif pin == uBit.pin10:
             shift = 6
-        elif pin == microbit.pin12:
+        elif pin == uBit.pin12:
             shift = 20
-        elif pin == microbit.pin13:
+        elif pin == uBit.pin13:
             shift = 23
-        elif pin == microbit.pin14:
+        elif pin == uBit.pin14:
             shift = 22
-        elif pin == microbit.pin15:
+        elif pin == uBit.pin15:
             shift = 21
-        elif pin == microbit.pin16:
+        elif pin == uBit.pin16:
             shift = 16
         else:
             raise ValueError('function not suitable for this pin')
@@ -285,7 +285,7 @@ class DHT11:
 
 if __name__ == '__main__':
 
-    sensor = DHT11(microbit.pin0)
+    sensor = DHT11(uBit.pin8)
     while True:
         try:
             t , h = sensor.read()
