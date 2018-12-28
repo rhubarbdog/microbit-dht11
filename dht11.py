@@ -59,8 +59,7 @@ class DHT11:
                 bits = len(data)
             raise DataError("Too many or too few bits " + str(bits))
 
-        bits = self._calc_bits(data)
-        data = self._bits_to_bytes(bits)
+        data = self._calc_bytes(data)
 
         checksum = self._calc_checksum(data)
         if data[4] != checksum:
@@ -243,7 +242,7 @@ class DHT11:
             results[i] = bits[i]
         return results
 
-    def _calc_bits(self, pull_up_lengths):
+    def _calc_bytes(self, pull_up_lengths):
 
         shortest = 1000
         longest = 0
@@ -256,28 +255,21 @@ class DHT11:
                 longest = length
 
         halfway = shortest + (longest - shortest) / 2
-        bits = bytearray(40)
-
-        for i in range(len(pull_up_lengths)):
-            bits[i] = pull_up_lengths[i] > halfway
-
-        return bits
-
-    def _bits_to_bytes(self, bits):
         data = bytearray(5)
         did = 0
         byte = 0
 
-        for i in range(len(bits)):
+        for i in range(len(pull_up_lengths)):
             byte = byte << 1
-            if bits[i]:
+            
+            if pull_up_lengths[i] > halfway:
                 byte = byte | 1
 
             if ((i + 1) % 8 == 0):
                 data[did] = byte
                 did += 1
                 byte = 0
-
+                
         return data
 
     def _calc_checksum(self, data):
