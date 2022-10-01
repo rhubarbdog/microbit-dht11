@@ -176,63 +176,28 @@ class DHT11:
         mov(r0, r5)       # return number of bytes written
 
     def _parse_data(self, buffer_):
-        # changed initial states, tyey are lost in the change over
-        INIT_PULL_DOWN = 1
-        INIT_PULL_UP = 2
-        DATA_1_PULL_DOWN = 3
-        DATA_PULL_UP = 4
-        DATA_PULL_DOWN = 5
-
-        #state = INIT_PULL_DOWN
-        state = INIT_PULL_UP
-
         max_bits = 50
         bits = bytearray(max_bits)
         length = 0
         bit_ = 0
+        init = True
         
-        for i in range(len(buffer_)):
+        for current in buffer_:
 
-            current = buffer_[i]
-            length += 1
-
-            if state == INIT_PULL_DOWN:
-                if current == 0:
-                    state = INIT_PULL_UP
-                    continue
-                else:
-                    continue
-            if state == INIT_PULL_UP:
-                if current == 1:
-                    state = DATA_1_PULL_DOWN
-                    continue
-                else:
-                    continue
-            if state == DATA_1_PULL_DOWN:
-                if current == 0:
-                    state = DATA_PULL_UP
-                    continue
-                else:
-                    continue
-            if state == DATA_PULL_UP:
-                if current == 1:
-                    length = 0
-                    state = DATA_PULL_DOWN
-                    continue
-                else:
-                    continue
-            if state == DATA_PULL_DOWN:
-                if current == 0:
-                    bits[bit_] = length
-                    bit_ += 1
-                    state = DATA_PULL_UP
-                    continue
-                else:
-                    continue
-
-            if bit_ >= max_bits:
-                break
-
+            if current == 1:
+                length += 1
+            elif bit_ == 0 and length == 0:
+                pass
+            elif init:
+                length = 0
+                init = False
+            elif bit_ >= max_bits:
+                pass  
+            elif length > 0:
+                bits[bit_] = length
+                length = 0
+                bit_ += 1
+                
         if bit_ == 0:
             return None
         
