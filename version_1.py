@@ -8,7 +8,6 @@
 # License - MIT
 
 import microbit as uBit
-import time
 
 DEGREES = u'\xb0'
 
@@ -30,11 +29,11 @@ class DHT11:
             buffer_[i] = 1
 
         pin.write_digital(1)
-        time.sleep_ms(50)
+        uBit.sleep(50)
         self._block_irq()
 
         pin.write_digital(0)
-        time.sleep_ms(20)
+        uBit.sleep(20)
         
         pin.set_pull(pin.PULL_UP)
         
@@ -42,7 +41,7 @@ class DHT11:
             self._unblock_irq()
             raise Exception("Grab bits failed.")
         else:
-            self._unblock_irq()
+            self._unblock_irq() 
 
         #for b in buffer_:
         #    print(b, end = "")
@@ -277,7 +276,7 @@ class DHT11:
 
 if __name__ == '__main__':
 
-    sensor = DHT11(uBit.pin8)
+    sensor = DHT11(uBit.pin0)
     while True:
         try:
             t , h = sensor.read()
@@ -285,4 +284,4 @@ if __name__ == '__main__':
         except DataError as e:
             print("Error : " + str(e))
 
-        time.sleep(2)
+        uBit.sleep(2000)
