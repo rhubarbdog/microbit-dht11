@@ -176,7 +176,8 @@ class DHT11:
         label(RETURN)
         mov(r0, r5)       # return number of bytes written
 
-    def _parse_data(self, buffer_):
+    @staticmethod
+    def _parse_data(buffer_):
 
         max_bits = 50
         bits = bytearray(max_bits)
@@ -208,7 +209,8 @@ class DHT11:
             results[i] = bits[i]
         return results
 
-    def _calc_bytes(self, pull_up_lengths):
+    @staticmethod
+    def _calc_bytes(pull_up_lengths):
 
         shortest = 1000
         longest = 0
@@ -238,7 +240,8 @@ class DHT11:
                 
         return data
 
-    def _calc_checksum(self, data):
+    @staticmethod
+    def _calc_checksum(data):
         return data[0] + data[1] + data[2] + data[3] & 0xff
 
 if __name__ == '__main__':
